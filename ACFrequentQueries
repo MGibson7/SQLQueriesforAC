@@ -1,0 +1,94 @@
+#query to quickly see overall unique accounts, their monthly performance, and search within them based on different where and having clause criteria
+
+use residual_customers;
+Select count(distinct account), account, customer, programming, sum(fee) as billing, sum(residual) as residual, phone, city, start, state, type
+FROM august_2022_residual
+#Where phone = ''
+#where account = ''
+#Where customer  =''
+#Where state = ''
+#Where start > 'yyyy-mm-dd' and state = ""
+#Group By account
+#HAVING state = ''
+#Order By residual desc
+
+*********************************************************************************************************************************************************************
+
+#query to inner join two tables based on common accounts. Great for seeing which accounts were originated from which sales rep or certain source 
+
+use residual_customers;
+Select count(distinct account), account, customer, programming, sum(fee) as billing, sum(residual) as residual, phone, city, start, state, type
+FROM august2022ouraccounts oa
+JOIN august_2022_residual ar ON ar.account = oa.accounts
+#Where customer =''
+#Where start > ''
+#Group By account
+#Order By residual desc limit 10
+
+*********************************************************************************************************************************************************************
+
+#query to quickly identify newly acquired or recently lost accounts within the past 30 days
+
+USE residual_customers;
+SELECT count(distinct(Account)), Customer, Start
+FROM july_2022_residual
+WHERE Account NOT IN (SELECT Account FROM august_2022_residual)
+#Group by account
+#Flip this month in row 3 with last month in row 4 to see lost jobs
+
+*********************************************************************************************************************************************************************
+
+#same query as above but can narrow down by rep or source dependent on what table you join with 
+
+USE residual_customers;
+SELECT Count(distinct Account), Customer, Start
+FROM august2022ouraccounts oa
+JOIN august_2022_residual ar ON ar.account = oa.accounts
+WHERE Account NOT IN (SELECT Account FROM july_2022_residual)
+#group by account
+#Swap this month in row 3 and 4 with last month in row 5 for lost jobs
+
+*********************************************************************************************************************************************************************
+
+#nested queries to quickly find out the differences between this month compared to a month ago, quarter ago, year ago, etc. 
+#edit subset queries with certain month and final select query with comparison month for differentials
+use residual_customers;
+WITH subset (last_residual) AS 
+(select sum(residual)
+FROM june_2022_residual
+Where account != '0'),
+subset_2 (last_customers) AS 
+(select count(distinct account)
+FROM june_2022_residual
+WHERE account !=0),
+subset_3 (last_billing) AS 
+(select sum(fee)
+FROM june_2022_residual
+WHERE account !=0)
+Select sum(residual) - (select last_residual from subset)  as residual_difference, count(distinct account) - (select last_customers from subset_2) as customer_dif, sum(fee) - (select last_billing from subset_3) as billing_dif
+FROM july_2022_residual
+WHERE account !=0
+
+*********************************************************************************************************************************************************************
+#same nested queries as above but with added option to join certain source or rep tables 
+#edit subset queries with last month and final select query with this month for differentials
+use residual_customers;
+WITH subset (last_residual) AS 
+(select sum(residual)
+FROM june2022ouraccounts oa
+JOIN june_2022_residual ar ON ar.account = oa.accounts
+Where account != '0'),
+subset_2 (last_customers) AS 
+(select count(distinct account)
+FROM june2022ouraccounts oa
+JOIN june_2022_residual ar ON ar.account = oa.accounts
+WHERE account !=0),
+subset_3 (last_billing) AS 
+(select sum(fee)
+FROM june2022ouraccounts oa
+JOIN june_2022_residual ar ON ar.account = oa.accounts
+WHERE account !=0)
+Select sum(residual) - (select last_residual from subset)  as residual_difference, count(distinct account) - (select last_customers from subset_2) as customer_dif, sum(fee) - (select last_billing from subset_3) as billing_dif
+FROM july2022ouraccounts oa
+JOIN july_2022_residual ar ON ar.account = oa.accounts
+WHERE account !=0
